@@ -318,7 +318,6 @@
     .bottom-left { bottom: 12px; left: 12px; border-bottom-color: rgba(255,255,255,0.15); border-left-color: rgba(255,255,255,0.15); }
     .bottom-right { bottom: 12px; right: 12px; border-bottom-color: rgba(255,255,255,0.15); border-right-color: rgba(255,255,255,0.15); }
   
-.get-key-btn:disabled{opacity:.65;cursor:wait}
 .get-key-btn{
 width:100%;margin-top:12px;padding:14px;border:none;border-radius:10px;
 background:linear-gradient(90deg,#ffcc00,#ff7b00);font-size:16px;font-family:'Orbitron',sans-serif;font-weight:700;cursor:pointer}
@@ -380,93 +379,38 @@ background:linear-gradient(90deg,#ffcc00,#ff7b00);font-size:16px;font-family:'Or
       }
     }
 
-    // Firebase Cloud Functions endpoint: set this after deployment.
-    const API_BASE = "https://us-central1-developer-70f89.cloudfunctions.net";
-
-    async function apiCall(endpoint, body) {
-      const response = await fetch(`${API_BASE}/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body || {})
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Request failed. Please try again.");
-      }
-      return data;
-    }
-
-    function showMessage(message) {
-      alert(message);
-    }
-
-    async function getKey() {
-      const button = document.querySelector(".get-key-btn");
-      button.disabled = true;
-      button.textContent = "GENERATING...";
-      try {
-        const result = await apiCall("createKey", {});
-        document.getElementById("username").value = result.username;
-        document.getElementById("password").value = result.password;
-        showMessage(
-          "Your login key is ready. Save these credentials now.\n\nUsername: " +
-          result.username + "\nPassword: " + result.password
-        );
-      } catch (error) {
-        showMessage(error.message);
-      } finally {
-        button.disabled = false;
-        button.textContent = "GET KEY";
-      }
-    }
-
-    async function handleLogin(e) {
+    function handleLogin(e) {
       e.preventDefault();
-      const username = document.getElementById("username").value.trim();
+      const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
+      const savePass = document.getElementById("savePass").checked;
       const loadingWrapper = document.getElementById("loadingWrapper");
-      const loadingText = document.getElementById("loadingText");
-      const loginButton = document.querySelector(".login-btn");
 
       loadingWrapper.style.display = "flex";
-      loginButton.disabled = true;
-      loadingText.textContent = "AUTHENTICATING...";
 
-      try {
-        const result = await apiCall("login", { username, password });
-        // Keep only the short-lived session token; never save the password.
-        localStorage.setItem("accessSessionToken", result.sessionToken);
-        localStorage.setItem("accessSessionExpiry", String(result.expiresAt));
-
-        if (window.Android && typeof window.Android.sendData === "function") {
-          // Sketchware bridge should accept (username, password, sessionToken).
-          window.Android.sendData(username, password, result.sessionToken);
-        } else {
-          showMessage("Login successful, but Android interface is not available.");
-        }
-      } catch (error) {
-        showMessage(error.message);
-      } finally {
+      setTimeout(() => {
         loadingWrapper.style.display = "none";
-        loginButton.disabled = false;
-      }
-    }
-
-    async function restoreSavedSession() {
-      const token = localStorage.getItem("accessSessionToken");
-      if (!token) return;
-      try {
-        const result = await apiCall("validateSession", { sessionToken: token });
-        if (window.Android && typeof window.Android.restoreSession === "function") {
-          window.Android.restoreSession(result.username, token, result.expiresAt);
+        if (window.Android) {
+          window.Android.sendData(username, password);
+        } else {
+          alert("Android interface not available.");
         }
-      } catch (_) {
-        localStorage.removeItem("accessSessionToken");
-        localStorage.removeItem("accessSessionExpiry");
-      }
+        if (savePass) {
+          localStorage.setItem("savedUser", username);
+          localStorage.setItem("savedPass", password);
+        }
+      }, 2000);
     }
 
-    window.addEventListener("load", restoreSavedSession);
+    window.onload = () => {
+      const savedUser = localStorage.getItem("savedUser");
+      const savedPass = localStorage.getItem("savedPass");
+      if (savedUser && savedPass) {
+        document.getElementById("username").value = savedUser;
+        document.getElementById("password").value = savedPass;
+        document.getElementById("savePass").checked = true;
+      }
+    };
 
     // Advanced Matrix/Glow Line Smooth Floating Particles
     const canvas = document.getElementById("particleCanvas");
@@ -558,6 +502,10 @@ background:linear-gradient(90deg,#ffcc00,#ff7b00);font-size:16px;font-family:'Or
       canvas.height = window.innerHeight;
     });
   
+function getKey(){
+ window.open("https://your-key-generator-link.com","_blank");
+}
+
 </script>
 </body>
 </html>
